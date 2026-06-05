@@ -1,5 +1,6 @@
 const markupTags             = require("@saltcorn/markup/tags");
 const View                   = require("@saltcorn/data/models/view");
+const Page                   = require("@saltcorn/data/models/page");
 const User                   = require("@saltcorn/data/models/user");
 const File                   = require("@saltcorn/data/models/file");
 const Workflow               = require("@saltcorn/data/models/workflow");
@@ -121,14 +122,8 @@ const runCodeImpl = async ({ code }, state, req) => {
   const emitEvent   = (eventType, channel, payload) => Trigger.emitEvent(eventType, channel, user, payload);
   const output      = [];
   const fakeConsole = {
-    log(...s) {
-      console.log(...s);
-      output.push([s, false]);
-    },
-    error(...s) {
-      console.error(...s);
-      output.push([s, true]);
-    },
+    log(...s)   { console.log(...s);   output.push([s, false]); },
+    error(...s) { console.error(...s); output.push([s, true]);  },
   };
 
   try {
@@ -138,6 +133,7 @@ const runCodeImpl = async ({ code }, state, req) => {
       console: fakeConsole,
       Actions,
       View,
+      Page,
       User,
       File,
       emitEvent,
@@ -151,6 +147,7 @@ const runCodeImpl = async ({ code }, state, req) => {
     const runRes = await f();
 
     if (output.length > 0 && typeof runRes === "string")
+    {
       return (
         runRes +
         `<script>${output
@@ -158,8 +155,10 @@ const runCodeImpl = async ({ code }, state, req) => {
           .join("\n")
         }</script>`
       );
-
-    else return runRes;
+      
+    } else {
+      return runRes;
+    }
 
   } catch (err) {
     if (output.length > 0)
@@ -172,14 +171,14 @@ const runCodeImpl = async ({ code }, state, req) => {
 };
 
 module.exports = {
-  name               : "JsCodeView",
+  name               : "JsCodeViewEN",
   display_state_form : false,
   tableless          : true,
   run,
   get_state_fields,
   configuration_workflow,
 
-  queries            : ({ configuration : { code }, req }) => ({
+  queries : ({ configuration : { code }, req }) => ({
     async runCodeQuery(state) {
       return await runCodeImpl({ code }, state, req);
     },
