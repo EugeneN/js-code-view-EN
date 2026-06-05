@@ -1,17 +1,18 @@
-const Workflow = require("@saltcorn/data/models/workflow");
-const Form = require("@saltcorn/data/models/form");
-const FieldRepeat = require("@saltcorn/data/models/fieldrepeat");
-const Field = require("@saltcorn/data/models/field");
-const Table = require("@saltcorn/data/models/table");
-const View = require("@saltcorn/data/models/view");
-const User = require("@saltcorn/data/models/user");
-const File = require("@saltcorn/data/models/file");
-const { getState } = require("@saltcorn/data/db/state");
-const { mkTable } = require("@saltcorn/markup");
+const Workflow      = require("@saltcorn/data/models/workflow");
+const Form          = require("@saltcorn/data/models/form");
+const FieldRepeat   = require("@saltcorn/data/models/fieldrepeat");
+const Field         = require("@saltcorn/data/models/field");
+const Table         = require("@saltcorn/data/models/table");
+const View          = require("@saltcorn/data/models/view");
+const User          = require("@saltcorn/data/models/user");
+const File          = require("@saltcorn/data/models/file");
+const { getState }  = require("@saltcorn/data/db/state");
+const { mkTable }   = require("@saltcorn/markup");
 const { pre, code } = require("@saltcorn/markup/tags");
-const vm = require("vm");
+const vm            = require("vm");
 
 const runCode = async (codeStr, where, req) => {
+
   const f = vm.runInNewContext(`async () => {${codeStr}\n}`, {
     Table,
     state: where || {},
@@ -29,15 +30,19 @@ const runCode = async (codeStr, where, req) => {
 };
 
 const jsTypeGuess = (val) => {
-  if (val === null || val === undefined) return "String";
+  if (val === null || val === undefined) { return "String"; }
+
   switch (typeof val) {
     case "number":
       return Number.isInteger(val) ? "Integer" : "Float";
+
     case "boolean":
       return "Bool";
+
     case "object":
       if (val instanceof Date) return "Date";
       return "JSON";
+
     default:
       return "String";
   }
@@ -46,25 +51,27 @@ const jsTypeGuess = (val) => {
 const configuration_workflow = (req) =>
   new Workflow({
     steps: [
+
       {
         name: "code",
         form: async () => {
           return new Form({
             fields: [
               {
-                name: "code",
-                label: "Code",
-                sublabel:
-                  "Write JavaScript code that returns an array of objects. Each object represents a row.",
-                input_type: "code",
-                attributes: { mode: "application/javascript" },
+                name       : "code",
+                label      : "Code",
+                sublabel   : "Write JavaScript code that returns an array of objects. Each object represents a row.",
+                input_type : "code",
+                attributes : { mode : "application/javascript" },
+
                 validator(s) {
                   try {
-                    let AsyncFunction = Object.getPrototypeOf(
-                      async function () {},
-                    ).constructor;
+                    let AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
                     AsyncFunction(s);
+                    
                     return true;
+
                   } catch (e) {
                     return e.message;
                   }
@@ -74,23 +81,27 @@ const configuration_workflow = (req) =>
           });
         },
       },
+
       {
         name: "columns",
         form: async (context) => {
           let rows = [];
           let error;
+
           try {
             rows = await runCode(context.code, {}, req);
+
             if (!Array.isArray(rows)) {
               error = "Code did not return an array";
-              rows = [];
+              rows  = [];
             }
+
           } catch (e) {
             error = e.message;
-            rows = [];
+            rows  = [];
           }
 
-          const tables = await Table.find({});
+          const tables    = await Table.find({});
           const fkey_opts = [
             "File",
             ...tables
@@ -99,15 +110,17 @@ const configuration_workflow = (req) =>
           ];
 
           const previewRows = rows.slice(0, 5);
-          const colNames = previewRows.length
+          const colNames    = previewRows.length
             ? Object.keys(previewRows[0])
             : [];
+
           const tbl = previewRows.length
             ? mkTable(
                 colNames.map((name) => ({ label: name, key: name })),
                 previewRows,
               )
             : "";
+
           const blurb = error
             ? pre(code(`Error: ${error}`))
             : tbl
@@ -118,37 +131,40 @@ const configuration_workflow = (req) =>
             blurb,
             fields: [
               {
-                input_type: "section_header",
-                label: "Column types",
+                input_type : "section_header",
+                label      : "Column types",
               },
               new FieldRepeat({
                 name: "columns",
                 fields: [
                   {
-                    name: "name",
-                    label: "Name",
-                    type: "String",
-                    required: true,
+                    name     : "name",
+                    label    : "Name",
+                    type     : "String",
+                    required : true,
                   },
+
                   {
-                    name: "label",
-                    label: "Label",
-                    type: "String",
-                    required: true,
+                    name     : "label",
+                    label    : "Label",
+                    type     : "String",
+                    required : true,
                   },
+
                   {
-                    name: "type",
-                    label: "Type",
-                    type: "String",
-                    required: true,
-                    attributes: {
-                      options: getState().type_names.concat(fkey_opts || []),
+                    name       : "type",
+                    label      : "Type",
+                    type       : "String",
+                    required   : true,
+                    attributes : {
+                      options  : getState().type_names.concat(fkey_opts || []),
                     },
                   },
+
                   {
-                    name: "primary_key",
-                    label: "Primary key",
-                    type: "Bool",
+                    name  : "primary_key",
+                    label : "Primary key",
+                    type  : "Bool",
                   },
                 ],
               }),
@@ -156,16 +172,18 @@ const configuration_workflow = (req) =>
           });
 
           if (!context.columns || !context.columns.length) {
-            if (!theForm.values) theForm.values = {};
+            if (!theForm.values) { theForm.values = {}; }
+
             if (previewRows.length) {
-              const sampleRow = previewRows[0];
+              const sampleRow        = previewRows[0];
               theForm.values.columns = colNames.map((name) => ({
                 name,
-                label: Field.nameToLabel(name),
-                type: jsTypeGuess(sampleRow[name]),
+                label : Field.nameToLabel(name),
+                type  : jsTypeGuess(sampleRow[name]),
               }));
             }
           }
+
           return theForm;
         },
       },
@@ -175,14 +193,18 @@ const configuration_workflow = (req) =>
 module.exports = {
   "JavaScript code": {
     configuration_workflow,
-    fields: (cfg) => cfg?.columns || [],
-    get_table: (cfg) => ({
+    fields    : (cfg) => cfg?.columns || [],
+    get_table : (cfg) => ({
+
       getRows: async (where, opts) => {
         const rows = await runCode(cfg.code, where, opts);
+
         return Array.isArray(rows) ? rows : [];
       },
+
       countRows: async (where, opts) => {
         const rows = await runCode(cfg.code, where, opts);
+        
         return Array.isArray(rows) ? rows.length : 0;
       },
     }),

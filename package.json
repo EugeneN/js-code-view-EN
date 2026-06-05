@@ -1,36 +1,39 @@
 {
-  "name": "@saltcorn/code-view",
-  "version": "0.2.1",
-  "description": "Generate Saltcorn view output from code",
-  "main": "index.js",
-  "dependencies": {
-    "@saltcorn/markup": "^0.8.1",
-    "@saltcorn/data": "^0.8.1",
-    "handlebars": "4.7.7"
+  "name"         : "@saltcorn/code-view-en",
+  "version"      : "0.1.0.2.1",
+  "description"  : "Generate Saltcorn view output from code EN",
+  "main"         : "index.js",
+  "dependencies" : {
+    "@saltcorn/markup" : "^0.8.1",
+    "@saltcorn/data"   : "^0.8.1",
+    "handlebars"       : "4.7.7"
   },
-  "author": "Tom Nielsen",
-  "license": "MIT",
-  "devDependencies": {
+  "author"          : "Eugene Naumenko",
+  "license"         : "MIT",
+  "devDependencies" : {
     "jest": "^29.7.0"
   },
-  "repository": "github:saltcorn/js-code-view",
-  "scripts": {
+  "repository" : "github:EugeneN/js-code-view-EN",
+  "scripts"    : {
     "test": "jest tests --runInBand"
   },
+
   "eslintConfig": {
-    "extends": "eslint:recommended",
-    "parserOptions": {
+    "extends"       : "eslint:recommended",
+    "parserOptions" : {
       "ecmaVersion": 2020
     },
+
     "env": {
-      "node": true,
-      "es6": true
+      "node" : true,
+      "es6"  : true
     },
+
     "rules": {
-      "no-unused-vars": "off",
-      "no-case-declarations": "off",
-      "no-empty": "warn",
-      "no-fallthrough": "warn"
+      "no-unused-vars"       : "off",
+      "no-case-declarations" : "off",
+      "no-empty"             : "warn",
+      "no-fallthrough"       : "warn"
     }
   }
 }
