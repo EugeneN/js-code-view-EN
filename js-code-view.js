@@ -17,6 +17,9 @@ const { stateFieldsToWhere } = require("@saltcorn/data/plugin-helper");
 const { mergeIntoWhere }     = require("@saltcorn/data/utils");
 const vm                     = require("vm");
 
+import fetchLib from "node-fetch";
+const fetch = fetchLib; // NodeNext default-import interop for node-fetch
+
 
 const configuration_workflow = () =>
   new Workflow({
@@ -134,6 +137,7 @@ const runCodeImpl = async ({ code }, state, req) => {
       Actions,
       View,
       Page,
+      fetch,
       User,
       File,
       emitEvent,
