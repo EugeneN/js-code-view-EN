@@ -74,7 +74,8 @@ const runPost = async (
     ) => 
 {
     const { code, run_where } = view_configuration
-    
+    const state               = getState();
+
     return await runCodeImpl({ code }, state, extraArgs.req);
 };
 
