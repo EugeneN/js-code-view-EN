@@ -62,6 +62,22 @@ const configuration_workflow = () =>
 
 const get_state_fields = () => [];
 
+const runPost = async (
+        table_id,
+        view_name,
+        view_configuration,
+        query,
+        body,
+        extraArgs,
+        queries,
+        is_remote
+    ) => 
+{
+    const { code, run_where } = view_configuration
+    
+    return await runCodeImpl({ code }, state, extraArgs.req);
+};
+
 const run = async (
   table_id,
   viewname,
@@ -178,6 +194,7 @@ module.exports = {
   display_state_form : false,
   tableless          : true,
   run,
+  runPost,
   get_state_fields,
   configuration_workflow,
 
