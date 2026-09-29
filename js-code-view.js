@@ -16,6 +16,7 @@ const { getState, features } = require("@saltcorn/data/db/state");
 const { stateFieldsToWhere } = require("@saltcorn/data/plugin-helper");
 const { mergeIntoWhere }     = require("@saltcorn/data/utils");
 const vm                     = require("vm");
+const { Buffer }             = require("buffer");
 
 const fetch = require("node-fetch");
 
@@ -145,9 +146,20 @@ const runCodeImpl = async ({ code }, state, req) => {
     error(...s) { console.error(...s); output.push([s, true]);  },
   };
 
+  const load = async (names) => {
+    const names_list    = Array.isArray(names) ? names : [names]
+    const bl_table      = await Table.findOne('BusinessLayer')
+    const objects_code  = await Promise.all(names_list.map(name => bl_table.getRow({name: name})))
+    const return_symbol = names_list.at(-1)
+
+    return eval(`${objects_code.map(x => x.code).join(';')}; ${return_symbol}`)
+}
+
   try {
     const f = vm.runInNewContext(`async () => {${code}\n}`, {
       Table,
+      Buffer,
+      load,
       user,
       console: fakeConsole,
       Actions,

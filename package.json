@@ -1,6 +1,6 @@
 {
   "name"         : "@saltcorn/code-view-en",
-  "version"      : "0.2.0.2.3",
+  "version"      : "0.2.0.2.4",
   "description"  : "Generate Saltcorn view output from code EN",
   "main"         : "index.js",
   "dependencies" : {
