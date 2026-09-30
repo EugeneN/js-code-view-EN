@@ -1,79 +1,79 @@
-const markupTags             = require("@saltcorn/markup/tags");
-const View                   = require("@saltcorn/data/models/view");
-const Page                   = require("@saltcorn/data/models/page");
-const User                   = require("@saltcorn/data/models/user");
-const File                   = require("@saltcorn/data/models/file");
-const Workflow               = require("@saltcorn/data/models/workflow");
-const Table                  = require("@saltcorn/data/models/table");
-const Trigger                = require("@saltcorn/data/models/trigger");
-const Form                   = require("@saltcorn/data/models/form");
-const Field                  = require("@saltcorn/data/models/field");
-const {jsexprToWhere, jsexprToSQL} = require("@saltcorn/data/models/expression");
+const markupTags                     = require("@saltcorn/markup/tags");
+const View                           = require("@saltcorn/data/models/view");
+const Page                           = require("@saltcorn/data/models/page");
+const User                           = require("@saltcorn/data/models/user");
+const File                           = require("@saltcorn/data/models/file");
+const Workflow                       = require("@saltcorn/data/models/workflow");
+const Table                          = require("@saltcorn/data/models/table");
+const Trigger                        = require("@saltcorn/data/models/trigger");
+const Form                           = require("@saltcorn/data/models/form");
+const Field                          = require("@saltcorn/data/models/field");
+const { jsexprToWhere, jsexprToSQL } = require("@saltcorn/data/models/expression");
 
-const db                     = require("@saltcorn/data/db");
-const { getState, features } = require("@saltcorn/data/db/state");
+const db                             = require("@saltcorn/data/db");
+const { getState, features }         = require("@saltcorn/data/db/state");
 
-const { stateFieldsToWhere } = require("@saltcorn/data/plugin-helper");
-const { mergeIntoWhere }     = require("@saltcorn/data/utils");
-const vm                     = require("vm");
-const { Buffer }             = require("buffer");
+const { stateFieldsToWhere }         = require("@saltcorn/data/plugin-helper");
+const { mergeIntoWhere }             = require("@saltcorn/data/utils");
+const vm                             = require("vm");
+const { Buffer }                     = require("buffer");
 
-const fetch = require("node-fetch");
+const fetch                          = require("node-fetch");
 
 
 const configuration_workflow = () =>
-  new Workflow({
-    steps: [
-      {
-        name: "Code",
+    new Workflow({
+        steps: [
+            {
+                name: "Code",
 
-        form: () => {
-          return new Form({
-            fields: [
-              {
-                name       : "code",
-                label      : "Code",
-                input_type : "code",
-                attributes : { mode : "application/javascript" },
+                form: () => {
+                    return new Form({
+                        fields: [
+                            {
+                                name      : "code",
+                                label     : "Code",
+                                input_type: "code",
+                                attributes: { mode: "application/javascript" },
 
-                validator(s) {
-                  try {
-                    let AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+                                validator(s) {
+                                    try {
+                                        let AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
 
-                    AsyncFunction(s);
-                    return true;
+                                        AsyncFunction(s);
+                                        return true;
 
-                  } catch (e) {
-                    return e.message;
-                  }
+                                    } catch (e) {
+                                        return e.message;
+                                    }
+                                },
+                            },
+                            {
+                                name      : "run_where",
+                                label     : "Run where",
+                                input_type: "select",
+                                options   : ["Server", "Client page"],
+                            },
+                        ],
+                    });
                 },
-              },
-              {
-                name       : "run_where",
-                label      : "Run where",
-                input_type : "select",
-                options    : ["Server", "Client page"],
-              },
-            ],
-          });
-        },
-      },
-    ],
-  });
+            },
+        ],
+    });
 
 const get_state_fields = () => [];
 
 const runPost = async (
-        table_id,
-        view_name,
-        view_configuration,
-        query,
-        body,
-        extraArgs,
-        queries,
-        is_remote
-    ) => 
-{
+            table_id,
+            view_name,
+            view_configuration,
+            query,
+            body,
+            extraArgs,
+            queries,
+            is_remote
+        ) => {
+            
     const { code, run_where } = view_configuration
     const state               = getState();
 
@@ -81,151 +81,150 @@ const runPost = async (
 };
 
 const run = async (
-  table_id,
-  viewname,
-  { code, run_where },
-  state,
-  extraArgs,
-  queriesObj,
-) => {
+            table_id,
+            viewname,
+            { code, run_where },
+            state,
+            extraArgs,
+            queriesObj,
+        ) => {
 
-  const table = Table.findOne(table_id);
+    const table = Table.findOne(table_id);
 
-  if (run_where === "Client page") {
-    const rndid = Math.floor(Math.random() * 16777215).toString(16);
+    if (run_where === "Client page") {
+        const rndid = Math.floor(Math.random() * 16777215).toString(16);
 
-    return (
-      markupTags.div({ id: `jsv${rndid}` }) +
-      markupTags.script(
-        markupTags.domReady(`
-    const out = (()=>{
-      ${code}
-    })()
-    if(typeof out !== "undefined" && out !==null)
-	    $('#jsv${rndid}').html(out);`),
-      )
-    );
-  }
+        return (
+            markupTags.div({ id: `jsv${rndid}` }) +
+            markupTags.script(
+                markupTags.domReady(`
+                    const out = (()=>{
+                        ${code}
+                    })();
+                    if(typeof out !== "undefined" && out !==null) $('#jsv${rndid}').html(out);
+                `),
+            )
+        );
+    }
 
-  return queriesObj?.runCodeQuery
-    ? await queriesObj.runCodeQuery(state)
-    : await runCodeImpl({ code }, state, extraArgs.req);
+    return queriesObj?.runCodeQuery
+        ? await queriesObj.runCodeQuery(state)
+        : await runCodeImpl({ code }, state, extraArgs.req);
 };
 
 const runCodeImpl = async ({ code }, state, req) => {
 
-  const user    = req.user;
-  const Actions = {};
+    const user    = req.user;
+    const Actions = {};
 
-  Object.entries(getState().actions).forEach(([k, v]) => {
-    Actions[k] = (args = {}) => {
-      v.run({ user, configuration: args, ...args });
-    };
-  });
-
-  const trigger_actions = await Trigger.find({
-    when_trigger: { or: ["API call", "Never"] },
-  });
-
-  for (const trigger of trigger_actions) {
-    const state_action    = getState().actions[trigger.action];
-
-    Actions[trigger.name] = (args = {}) => {
-      state_action.run({
-        configuration: trigger.configuration,
-        user,
-        ...args,
-      });
-    };
-  }
-
-  const emitEvent   = (eventType, channel, payload) => Trigger.emitEvent(eventType, channel, user, payload);
-  const output      = [];
-  const fakeConsole = {
-    log(...s)   { console.log(...s);   output.push([s, false]); },
-    error(...s) { console.error(...s); output.push([s, true]);  },
-  };
-
-  const load = async (names) => {
-    const names_list    = Array.isArray(names) ? names : [names]
-    const bl_table      = await Table.findOne('BusinessLayer')
-    const objects_code  = await Promise.all(names_list.map(name => bl_table.getRow({name: name})))
-    const return_symbol = names_list.at(-1)
-
-    return eval(`${objects_code.map(x => x.code).join(';')}; ${return_symbol}`)
-}
-
-  try {
-    const f = vm.runInNewContext(`async () => {${code}\n}`, {
-      Table,
-      Buffer,
-      load,
-      user,
-      console: fakeConsole,
-      Actions,
-      View,
-      Page,
-      fetch,
-      User,
-      File,
-      emitEvent,
-      markupTags,
-      db,
-      req: req,
-      state,
-      ...getState().function_context,
+    Object.entries(getState().actions).forEach(([k, v]) => {
+        Actions[k] = (args = {}) => {
+            v.run({ user, configuration: args, ...args });
+        };
     });
 
-    const runRes = await f();
+    const trigger_actions = await Trigger.find({
+        when_trigger: { or: ["API call", "Never"] },
+    });
 
-    if (output.length > 0 && typeof runRes === "string")
-    {
-      return (
-        runRes +
-        `<script>${output
-          .map(([s, isError]) => `console.${isError ? "error" : "log"}(...${JSON.stringify(s)})`)
-          .join("\n")
-        }</script>`
-      );
-      
-    } else {
-      return runRes;
+    for (const trigger of trigger_actions) {
+        const state_action = getState().actions[trigger.action];
+
+        Actions[trigger.name] = (args = {}) => {
+            state_action.run({
+                configuration: trigger.configuration,
+                user,
+                ...args,
+            });
+        };
     }
 
-  } catch (err) {
-    if (output.length > 0)
-      err.message += `\n\nConsole output:\n\n${output
-        .map(([s, isError]) => s.map((x) => `${JSON.stringify(x)}`).join(" "))
-        .join("\n")}`;
+    const emitEvent   = (eventType, channel, payload) => Trigger.emitEvent(eventType, channel, user, payload);
+    const output      = [];
+    const fakeConsole = {
+        log(...s) { console.log(...s); output.push([s, false]); },
+        error(...s) { console.error(...s); output.push([s, true]); },
+    };
 
-    throw err;
-  }
+    const load = async (names) => {
+        const names_list    = Array.isArray(names) ? names : [names]
+        const bl_table      = await Table.findOne('BusinessLayer')
+        const objects_code  = await Promise.all(names_list.map(name => bl_table.getRow({ name: name })))
+        const return_symbol = names_list.at(-1)
+
+        return eval(`${objects_code.map(x => x.code).join(';')}; ${return_symbol}`)
+    }
+
+    try {
+        const f = vm.runInNewContext(`async () => {${code}\n}`, {
+            Table,
+            Buffer,
+            load,
+            user,
+            console: fakeConsole,
+            Actions,
+            View,
+            Page,
+            fetch,
+            User,
+            File,
+            emitEvent,
+            markupTags,
+            db,
+            req: req,
+            state,
+            ...getState().function_context,
+        });
+
+        const runRes = await f();
+
+        if (output.length > 0 && typeof runRes === "string") {
+            return (
+                runRes +
+                `<script>${output
+                    .map(([s, isError]) => `console.${isError ? "error" : "log"}(...${JSON.stringify(s)})`)
+                    .join("\n")
+                }</script>`
+            );
+
+        } else {
+            return runRes;
+        }
+
+    } catch (err) {
+        if (output.length > 0)
+            err.message += `\n\nConsole output:\n\n${output
+                .map(([s, isError]) => s.map((x) => `${JSON.stringify(x)}`).join(" "))
+                .join("\n")}`;
+
+        throw err;
+    }
 };
 
 module.exports = {
-  name               : "JsCodeViewEN",
-  display_state_form : false,
-  tableless          : true,
-  run,
-  runPost,
-  get_state_fields,
-  configuration_workflow,
+    name              : "JsCodeViewEN",
+    display_state_form: false,
+    tableless         : true,
+    run,
+    runPost,
+    get_state_fields,
+    configuration_workflow,
 
-  queries : ({ configuration : { code }, req }) => ({
-    async runCodeQuery(state) {
-      return await runCodeImpl({ code }, state, req);
-    },
-  }),
+    queries: ({ configuration: { code }, req }) => ({
+        async runCodeQuery(state) {
+            return await runCodeImpl({ code }, state, req);
+        },
+    }),
 
-  copilot_generate_view_prompt: getState().functions.copilot_standard_prompt
-    ? async () => {
-        const table_prompt =
-          await getState().functions.copilot_standard_prompt.run({
-            language      : "javascript",
-            has_table     : true,
-            has_functions : true,
-          });
-        return `You are generating JavaScript code which will return the html to be displayed as a string.
+    copilot_generate_view_prompt: getState().functions.copilot_standard_prompt
+        ? async () => {
+            const table_prompt =
+                await getState().functions.copilot_standard_prompt.run({
+                    language: "javascript",
+                    has_table: true,
+                    has_functions: true,
+                });
+            return `You are generating JavaScript code which will return the html to be displayed as a string.
         The view can run in two different modes: Server and Client page. 
         
         in both cases, you write asyncronous code that returns an HTML string. you can use await at the top level. 
@@ -238,6 +237,6 @@ module.exports = {
         
         ${table_prompt}        
         `;
-      }
-    : undefined,
+        }
+        : undefined,
 };
